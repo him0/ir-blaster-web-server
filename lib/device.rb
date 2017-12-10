@@ -1,91 +1,100 @@
 class Device
-
   class << self
-    def all
-      DB.db.keys(devices_db_key).to_json
-    end
-
-    def config(device_id)
-      DB.db.get(device_config_db_key(device_id))
-    end
-
+    # たまに動くけど動かない条件がわからない。
     def discover
-      ::BroadlinkRM::Device.discover.to_hash.tap{ |h|
+      discovered = ::BroadlinkRM::Device.discover.to_hash.tap do |h|
         h[:mac] = h[:mac].map{ |byte| byte.to_s(16).rjust(2, "0") }.join(":")
-        h[:device_id] = normalize_mac(h[:mac])
+        h[:device_id] = normalize_mac_address(h[:mac])
+      end
+      {
+        mac_address: discovered[:mac],
+        ip: discovered[:host],
+        port: discovered[:port]
       }
     end
 
+    # device key の一覧
+    def all
+      db = DB.new()
+      db.all
+    end
+
+    # params: {
+    #   name: 'xxx',
+    #   mac_address: 'xxxxxxx',
+    #   ip: '192.168.x.x',
+    #   port: 0000 
+    # }
+    # return: mac address を単純にしたもの
     def create!(params)
-      DB.db.set(device_config_db_key(normalize_mac(params[:mac])), params.to_json)
-      new(normalize_mac(params[:mac]))
+      db = DB.new()
+      params = db.register_device(params[:name], params[:mac_address], params[:ip], params[:port])
+      Device.new(params)
     end
 
-    def device_config_db_key(device_id)
-      "device_#{device_id}"
+    def delete!(params)
+      db = DB.new()
+      db.delete_device(params[:name])
     end
 
-    def devices_db_key
-      "device_*"
+    def find_by_name(name)
+      db = DB.new()
+      Device.new(db.find_device_by(name))
     end
 
-    def normalize_mac(mac)
-      if mac.is_a?(Array)
-        mac.map{ |e| e.is_a?(Integer) ? e.to_s(16).rjust(2,"0") : e }.join("")
-      elsif mac.is_a?(String)
-        mac.gsub(":", "")
+    # MAC Address の整形
+    def normalize_mac_address(mac_address)
+      if mac_address.is_a?(Array)
+        mac_address.map{ |e| e.is_a?(Integer) ? e.to_s(16).rjust(2,"0") : e }.join("")
+      elsif mac_address.is_a?(String)
+        mac_address.gsub(":", "")
       else
-        mac.to_s
+        mac_address.to_s
       end
     end
 
-    def mac_to_byte_array(mac)
-      normalize_mac(mac).scan(/.{2}/).map{|byte| byte.to_i(16)}
+    def mac_to_byte_array(mac_address)
+      normalize_mac_address(mac_address).scan(/.{2}/).map{|byte| byte.to_i(16)}
     end
   end
 
-  def initialize(device_id)
-    @config = JSON.parse(DB.db.get(self.class.device_config_db_key(device_id)))
-    @device_id, @mac, @host, @port = self.class.normalize_mac(@config['mac']), @config['mac'], @config['host'], @config['port']
+  attr_reader :id, :name, :mac_address, :ip, :port
+
+  def initialize(params)
+    @db = DB.new()
+    @id = params[:id]
+    @name = params[:name]
+    @mac_address = params[:mac_address]
+    @ip = params[:ip]
+    @port = params[:port]
+
     @broadlink_device = ::BroadlinkRM::Device.new(
-      host: @config['host'],
-      port: @config['port'],
-      mac:  self.class.mac_to_byte_array(@config['mac']))
+      host: @ip,
+      port: @port,
+      mac:  self.class.mac_to_byte_array(@mac_address)
+    )
     @broadlink_device.auth
   end
 
-  def commands
-    DB.db.keys(device_commands_db_key)
-  end
-
-  def config
-    @config
-  end
-
-  def learn(cmd_name, time_to_wait_seconds)
+  def learn(command_name, time_to_wait_seconds=10)
     if time_to_wait_seconds > 30
       raise "time_to_wait should not be larger than 30 seconds. We wouldn't want to lock up the device"
     end
     @broadlink_device.enter_learning
     sleep(time_to_wait_seconds % 31)
-    cmd = @broadlink_device.check_data
-    DB.db.set(device_command_db_key(cmd_name), cmd)
+    command = @broadlink_device.check_data
+    @db.register_command(@id, command_name, command)
   end
 
-  def send_command(cmd_name)
-    command = JSON.parse(DB.db.get(device_command_db_key(cmd_name)))
-    @broadlink_device.send_data(command)
+  def commands
+    @db.commands(@id)
   end
 
-  def device_db_key
-    self.class.device_config_db_key(@mac)
+  def execute_command(command_name)
+    @broadlink_device.send_data(@db.get_command_data_by(command_name))
   end
 
-  def device_commands_db_key
-    "cmd_#{@device_id}_*"
-  end
-
-  def device_command_db_key(cmd_name)
-    "cmd_#{@device_id}_#{cmd_name.downcase}"
+  def delete_command(name)
+    @db.delete_command(name)
   end
 end

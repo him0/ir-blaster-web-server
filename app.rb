@@ -2,45 +2,54 @@ require 'sinatra'
 require 'broadlink_rm'
 require 'json'
 
-class App < Sinatra::Application
+require 'sinatra/reloader' if development?
 
+class App < Sinatra::Application
+  enable :method_override
+  
   get "/" do
-    "Hi World"
+    @devices = Device.all
+    puts @devices[0][:name]
+    erb :index
   end
 
   get "/discover" do
-    Device.discover.to_json
-  end
-
-  get "/devices" do
-    Device.all.to_json
+    @device = Device.discover
+    erb :discover
   end
 
   post "/device" do
     Device.create!(params)
+    redirect '/'
   end
 
-  post "/:device_id/learn_command/:cmd_name/:timeout" do |device_id, cmd_name, timeout|
-    Device.new(device_id).learn(cmd_name, timeout.to_i)
+  delete "/device" do
+    Device.delete!(params)
+    redirect '/'
   end
 
-  put %r{/(?<device_id>[a-zA-Z0-9]{12})/(?<cmd_list>[a-zA-Z0-9_\-\+]+)} do |device_id, cmd_list|
-    unless @device = Device.new(device_id)
-      raise "Device #{device_id} is not configured. Post device params to /device to register the device."
+  namespace '/device' do
+    get %r{/(?<device_name>.+)\/(?<cmd_name>.+)} do |device_name, cmd_name|
+      @device = Device.find_by_name(device_name)
+      @device.execute_command(cmd_name)
+      redirect '/device/' + device_name
     end
-    repeat = (params['repeat'] || 1).to_i % 10
-    repeat.times do
-      cmd_list.split("+").each do |cmd_name|
-        if cmd_name =~ /^wait_([0-9]){1}$/
-          sleep((/^wait_([0-9]){1,2}$/.match("wait_45")[1].to_i % 10))
-        else
-          @device.send_command(cmd_name)
-        end
-      end
+  
+    get %r{/(?<device_name>.+)} do |device_name|
+      @device = Device.find_by_name(device_name)
+      redirect '/device/' + device_name
     end
-  end
 
-  get "/:device_id/commands" do |device_id|
-    Device.new(device_id).commands
+    post %r{/(?<device_name>.+)/learn} do |device_name|
+      @device = Device.find_by_name(device_name)
+      @device.learn(params[:cmd_name], params[:timeout].to_i)
+      redirect '/device/' + device_name
+    end
+
+    delete %r{/(?<device_name>.+)} do |device_name|
+      @device = Device.find_by_name(device_name)
+      @device.delete_command(params[:cmd_name])
+      redirect '/device/' + device_name
+    end
   end
 end

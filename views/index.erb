@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>お家赤外線リモコンサーバ</title>
+</head>
+<body>
+  <h2>デバイス一覧</h2>
+    <table>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>MAC Address</th>
+        <th>IP</th>
+        <th>Port</th>
+      </tr>
+      <% @devices.each do |device| %>
+        <tr>
+          <td><%= device[:id] %></td>
+          <td>
+            <a href="/device/<%= device[:name]  %>">
+              <%= device[:name] %>
+            </a>
+          </td>
+          <td><%= device[:mac_address] %></td>
+          <td><%= device[:ip] %></td>
+          <td><%= device[:port] %></td>
+        </tr>
+      <% end %>
+    </table>
+  <h2>デバイスをさがす</h2>
+  <p><a href="/discover">探す</a></p>
+  <h2>デバイスの登録</h2>
+  <form action="/device" method="POST">
+    <input type="text" name="name" placeholder="device name" />
+    <input type="text" name="mac_address" placeholder="mac address" />
+    <input type="text" name="ip" placeholder="ip" />
+    <input type="text" name="port" placeholder="port" />
+    <input type="submit">
+  </form>
+  <h2>デバイスの削除</h2>
+  <form action="/device" method="POST">
+    <input name="_method" type="hidden" value="DELETE">
+    <input type="text" name="name" placeholder="device name" />
+    <input type="submit">
+  </form>
+</body>
+</html>

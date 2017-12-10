@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>お家赤外線リモコンサーバ - デバイスの設定</title>
+</head>
+<body>
+  <h2>デバイスの情報</h2>
+    <table>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>MAC Address</th>
+        <th>IP</th>
+        <th>Port</th>
+      </tr>
+        <tr>
+          <td><%= @device.id %></td>
+          <td><%= @device.name %></td>
+          <td><%= @device.mac_address %></td>
+          <td><%= @device.ip %></td>
+          <td><%= @device.port %></td>
+        </tr>
+    </table>
+  <h2>コマンド一覧</h2>
+  <table>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+      </tr>
+      <% @device.commands.each do |command| %>
+        <tr>
+          <td><%= command[:id] %></td>
+          <td>
+            <a href="/device/<%= @device.name + '/' + command[:name] %>"><%= command[:name] %></a>
+          </td>
+        </tr>
+      <% end %>
+    </table>
+  <h2>コマンドの登録</h2>
+  <form action="/device/<%= @device.name %>/learn" method="POST">
+    <input type="text" name="cmd_name" placeholder="command name">
+    <input type="text" name="timeout" placeholder="timeout (<30s)">
+    <input type="submit">
+  </form>
+  <h2>コメンド削除</h2>
+  <form action="/device/<%= @device.name %>" method="POST">
+    <input name="_method" type="hidden" value="DELETE">
+    <input type="text" name="cmd_name" placeholder="command name">
+    <input type="submit">
+  </form>
+</body>
+</html>

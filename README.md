@@ -1,3 +1,5 @@
+# ir-blaster-web-server(with using sqlite3 and Japanization)
+
 ## Background
 Broadlink produces a nifty wifi-enabled IR blaster, but doesn't provide an API for it. The only known interface is an
 Android SDK. An Android 'RM Bridge' application exists to provide an http interface, but it requires an always-on
@@ -34,7 +36,18 @@ bf 69 99 d1 6a 79 db ee
 52 7f e5 d0 32 17 1f fb
 ```
 
-## Usage
-
 ## Credits
  * @mjg59 for the python-broadlink library that saved me many hours of effort
+
+ This repository is forked by him0. If it had problems, please make issue of this repository.
+
+## Usage
+### Setup sqlite DB
+```
+bin/seed
+```
+
+### start server
+```
+bin/www
+```

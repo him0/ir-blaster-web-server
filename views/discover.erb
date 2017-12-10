@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>お家赤外線リモコンサーバ - デバイスの設定</title>
+</head>
+<body>
+  <h2>デバイスの登録</h2>
+  <form action="/device" method="POST">
+    <input type="text" name="name" placeholder="device name" />
+    <input type="text" name="mac_address" placeholder="mac address" value="<%= @device[:mac_address] %>" />
+    <input type="text" name="ip" placeholder="ip" value="<%= @device[:ip] %>" />
+    <input type="text" name="port" placeholder="port" value="<%= @device[:port] %>" />
+    <input type="submit">
+  </form>
+  <p><a href="/">Home</a></p>
+</body>
+</html>

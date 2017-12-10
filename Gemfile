@@ -1,13 +1,10 @@
 source 'https://rubygems.org'
 
-ruby '2.3.1'
-
-gem 'broadlink_rm', git: "git://github.com/sleighter/broadlink_rm"
-gem 'dotenv'
+gem 'broadlink_rm', git: "https://github.com/him0/broadlink_rm"
 gem 'foreman'
 gem 'puma'
-gem 'pry'
 gem 'rack'
 gem 'rack-contrib'
-gem 'redis'
 gem 'sinatra'
+gem 'sinatra-contrib'
+gem 'sqlite3'
